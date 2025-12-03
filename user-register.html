@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gyors regisztráció – SzakiChat</title>
+
+<style>
+    body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; }
+    header {
+        background:#007aff; color:white; text-align:center;
+        padding:18px; font-size:22px; font-weight:bold;
+    }
+    .box {
+        background:white;
+        max-width:420px;
+        margin:20px auto;
+        padding:22px;
+        border-radius:12px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.15);
+    }
+    .input {
+        width:100%; padding:12px;
+        border-radius:8px; border:1px solid #ccc;
+        font-size:16px; margin-top:8px;
+    }
+    .btn {
+        width:100%; padding:12px; margin-top:16px;
+        background:#007aff; border:none;
+        color:white; font-weight:bold; font-size:17px;
+        border-radius:8px; cursor:pointer;
+    }
+    .btn:hover { transform:scale(1.02); }
+    .error {
+        color:#b80000; font-weight:bold; margin-top:8px;
+        display:none; font-size:14px;
+    }
+</style>
+</head>
+
+<body>
+
+<header>Gyors regisztráció</header>
+
+<div class="box">
+
+    <label><b>Név (csak név, elérhetőség tilos):</b></label>
+    <input id="nameInput" class="input" placeholder="Pl: K. Pista">
+
+    <label><b>Mit keresel? (festő, burkoló…)</b></label>
+    <input id="jobInput" class="input" placeholder="Pl: Festő">
+
+    <label><b>Hol? (város / kerület)</b></label>
+    <input id="cityInput" class="input" placeholder="Pl: Budapest XIII">
+
+    <div id="errorBox" class="error"></div>
+
+    <button class="btn" onclick="startRegistration()">Tovább</button>
+</div>
+
+
+<script>
+// ===============================
+// 🔥 Tiltó funkció – minden elérhetőség tiltva
+// ===============================
+function forbiddenContact(text) {
+    if (!text) return false;
+
+    const t = text.toLowerCase();
+
+    // Telefonszám minták
+    if (/[0-9]{6,}/.test(t)) return true;
+    if (t.includes("+36")) return true;
+    if (t.startsWith("06")) return true;
+
+    // Email
+    if (t.includes("@")) return true;
+    if (t.includes(".hu") || t.includes(".com") || t.includes(".net")) return true;
+
+    // Linkek
+    if (t.includes("http") || t.includes("www")) return true;
+
+    // Social
+    if (t.includes("facebook") || t.includes("messenger") || t.includes("instagram") || t.includes("tiktok"))
+        return true;
+
+    return false;
+}
+
+// ===============================
+// 🔥 Regisztráció indítása
+// ===============================
+function startRegistration() {
+    const name = document.getElementById("nameInput").value.trim();
+    const job = document.getElementById("jobInput").value.trim();
+    const city = document.getElementById("cityInput").value.trim();
+    const err = document.getElementById("errorBox");
+
+    // Üres mezők
+    if (!name || !job || !city) {
+        err.style.display = "block";
+        err.innerText = "Minden mezőt ki kell tölteni!";
+        return;
+    }
+
+    // Tiltott adatok vizsgálata
+    if (forbiddenContact(name)) {
+        err.style.display = "block";
+        err.innerText = "A név mezőben tilos elérhetőséget megadni!";
+        return;
+    }
+    if (forbiddenContact(job)) {
+        err.style.display = "block";
+        err.innerText = "A szakma mezőben tilos elérhetőséget megadni!";
+        return;
+    }
+    if (forbiddenContact(city)) {
+        err.style.display = "block";
+        err.innerText = "A város mezőben tilos elérhetőséget megadni!";
+        return;
+    }
+
+    // Ha minden OK → elmentjük gyorsprofilnak
+    localStorage.setItem("user_name", name);
+    localStorage.setItem("user_job", job);
+    localStorage.setItem("user_city", city);
+
+    // Tovább a regisztráció második lépésére
+    window.location.href = "regisztracio2.html";
+}
+</script>
+
+</body>
+</html>
