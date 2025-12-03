@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elérhető szakik – SzakiChat</title>
+
+<style>
+    body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; }
+    header {
+        background:#007aff; color:white; text-align:center;
+        padding:18px; font-size:22px; font-weight:bold;
+    }
+    .box {
+        background:white; max-width:480px; margin:20px auto;
+        padding:18px; border-radius:12px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.1);
+    }
+    .szaki {
+        border:1px solid #ddd; border-radius:10px;
+        padding:12px; margin:10px 0; background:#fafafa;
+    }
+    .btn {
+        background:#007aff; color:white; border:none;
+        padding:10px 14px; border-radius:8px; cursor:pointer;
+        margin-top:10px; width:100%;
+    }
+    .btn:disabled {
+        background:#ccc; cursor:not-allowed;
+    }
+    .small { font-size:14px; color:#555; margin-top:6px; }
+    .online { color:green; font-weight:bold; }
+</style>
+</head>
+
+<body>
+
+<header>Elérhető szakik</header>
+
+<div class="box" id="welcomeBox"></div>
+
+<div class="box">
+    <h3>Budapesti szakik:</h3>
+
+    <div id="szakiList"></div>
+</div>
+
+<script>
+// ➜ Megrendelő neve
+const userName = localStorage.getItem("user_name") || "Ismeretlen felhasználó";
+
+// ➜ Kiírás
+document.getElementById("welcomeBox").innerHTML =
+    `<b>${userName}</b><br><br>
+     Válassz ki maximum <b>3 szakembert</b>, akikkel szeretnél beszélni.`;
+
+// ➜ DEMÓ szakik (később FIREBASE lesz)
+const szakik = [
+    { id: 1, name: "Kis Lajos", profession: "Festő", city: "Budapest", online: true },
+    { id: 2, name: "Nagy Zsolt", profession: "Festő", city: "Budapest", online: false },
+    { id: 3, name: "Mészáros Dani", profession: "Burkoló", city: "Budapest", online: true },
+    { id: 4, name: "Varga Jani", profession: "Festő", city: "Budapest", online: false }
+];
+
+// ➜ Felhasználó által indított chatek száma
+let activeChats = 0;
+
+// ➜ Lista megjelenítés
+function renderList() {
+    const box = document.getElementById("szakiList");
+    box.innerHTML = "";
+
+    szakik.forEach(s => {
+        const isFull = activeChats >= 3;
+
+        box.innerHTML += `
+            <div class="szaki">
+                <b>${s.name}</b> — ${s.profession}<br>
+                <span class="small">Város: ${s.city}</span><br>
+                <span class="small ${s.online ? "online" : ""}">
+                    ${s.online ? "Online" : "Offline"}
+                </span><br><br>
+
+                <button class="btn"
+                        onclick="startChat(${s.id})"
+                        ${isFull ? "disabled" : ""}>
+                    Chat indítása
+                </button>
+            </div>
+        `;
+    });
+}
+
+renderList();
+
+// ➜ Chat indítása
+function startChat(id) {
+    activeChats++;
+
+    if (activeChats > 3) activeChats = 3;
+
+    // Átirányítás majd a chat oldalra:
+    localStorage.setItem("chat_with", id);
+
+    window.location.href = "user-chat.html"; // következő fájl
+}
+</script>
+
+</body>
+</html>
