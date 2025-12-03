@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Chat – SzakiChat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    body { margin:0; font-family:Arial; background:#f4f4f4; }
+
+    header {
+        background:#007aff; color:white; padding:14px;
+        display:flex; justify-content:space-between; align-items:center;
+        font-size:18px;
+    }
+
+    #messages {
+        height: calc(100vh - 170px);
+        overflow-y:auto; padding:12px;
+    }
+
+    .msg {
+        max-width:75%; padding:10px 14px;
+        border-radius:12px; margin-bottom:12px;
+        word-wrap:break-word;
+    }
+    .me { background:#007aff; color:white; margin-left:auto; }
+    .other { background:white; color:black; margin-right:auto; }
+
+    #inputBar {
+        display:flex; padding:10px; background:white; border-top:1px solid #ddd;
+    }
+    #msgInput {
+        flex:1; padding:10px; border:1px solid #ccc; border-radius:8px;
+    }
+    #sendBtn, #micBtn, #imgBtn {
+        padding:10px 12px; margin-left:8px; border:none; border-radius:8px;
+        background:#007aff; color:white; cursor:pointer;
+    }
+    #typing {
+        padding-left:12px; color:#666; font-size:14px; height:20px;
+    }
+
+    #lockWarning {
+        display:none; background:#ffe2e2; padding:10px; text-align:center;
+        color:#a10000; font-weight:bold;
+    }
+
+    /* Reklám hely */
+    .adBox {
+        background:#fff; padding:10px; margin:10px;
+        border-radius:8px; text-align:center;
+        font-size:14px; color:#444;
+    }
+</style>
+</head>
+
+<body>
+
+<header>
+    <div id="partnerName">Chat</div>
+    <div id="partnerStatus">⚪</div>
+</header>
+
+<div id="lockWarning">🔒 Elérhetőség küldése tiltva! 5 megosztás kell.</div>
+
+<div id="messages">Betöltés...</div>
+<div id="typing"></div>
+
+<!-- Reklám -->
+<div class="adBox">🔶 Reklám hely – Google Ads</div>
+
+<div id="inputBar">
+    <button id="micBtn">🎤</button>
+    <button id="imgBtn">📷</button>
+    <input id="msgInput" type="text" placeholder="Írj üzenetet...">
+    <button id="sendBtn">Küldés</button>
+</div>
+
+<input type="file" id="imgPicker" accept="image/*" style="display:none">
+
+<script type="module" src="chat.js"></script>
+</body>
+</html>
