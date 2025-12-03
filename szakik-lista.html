@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Szakember választás – SzakiChat</title>
+
+<style>
+    body { font-family:Arial; background:#f2f2f2; margin:0; }
+    header {
+        background:#007aff; color:white; text-align:center;
+        padding:16px; font-size:22px; font-weight:bold;
+    }
+    .box {
+        max-width:480px; margin:20px auto; background:white;
+        padding:18px; border-radius:12px;
+        box-shadow:0 3px 12px rgba(0,0,0,0.15);
+    }
+    .szaki {
+        padding:14px; border:1px solid #ddd; border-radius:10px;
+        margin:10px 0; background:#fafafa;
+    }
+    .btn {
+        margin-top:10px; width:100%; background:#007aff; color:white;
+        padding:10px; border:none; border-radius:8px; cursor:pointer;
+    }
+    .btn:disabled { background:#ccc; cursor:not-allowed; }
+    .online { color:green; font-weight:bold; }
+    .small { font-size:14px; color:#666; margin-top:4px; }
+</style>
+</head>
+
+<body>
+
+<header>Válassz maximum 3 szakembert</header>
+
+<div class="box" id="welcome"></div>
+
+<div class="box">
+    <h3>Elérhető szakemberek Budapesten:</h3>
+    <div id="szakiList">Betöltés…</div>
+</div>
+
+<script type="module">
+import { db } from "./firebase.js";
+import {
+    collection, query, where, getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// --- A megrendelő neve a localStorage-ból ---
+const userName = localStorage.getItem("user_name") || "Ismeretlen felhasználó";
+document.getElementById("welcome").innerHTML = `
+    <b>${userName}</b><br>
+    Válassz ki 1–3 szakembert, akikkel szeretnél beszélni.  
+`;
+
+let selected = JSON.parse(localStorage.getItem("selected_szakik") || "[]");
+
+// --- Betöltjük a szakikat FIRESTORE-ból ---
+async function loadSzakik() {
+    const listBox = document.getElementById("szakiList");
+    listBox.innerHTML = "Betöltés…";
+
+    const q = query(
+        collection(db, "users"),
+        where("role", "==", "szaki"),
+        where("city", "==", "Budapest")
+    );
+
+    const snap = await getDocs(q);
+
+    listBox.innerHTML = "";
+    snap.forEach(docu => {
+        const s = docu.data();
+        const id = docu.id;
+
+        const online = s.online ? "🟢 Online" : "⚪ Offline";
+
+        const disabled = selected.length >= 3 && !selected.includes(id)
+            ? "disabled"
+            : "";
+
+        listBox.innerHTML += `
+            <div class="szaki">
+                <b>${s.name}</b> — ${s.profession}<br>
+                <span class="small">${online}</span><br>
+                <button class="btn" ${disabled} onclick="selectSzaki('${id}', '${s.name}')">
+                    Chat indítása
+                </button>
+            </div>
+        `;
+    });
+}
+
+loadSzakik();
+
+// --- Szakember kiválasztása ---
+window.selectSzaki = function(id, name) {
+    if (!selected.includes(id)) selected.push(id);
+
+    if (selected.length > 3) selected.length = 3;
+
+    localStorage.setItem("selected_szakik", JSON.stringify(selected));
+
+    localStorage.setItem("chat_with", id);
+    localStorage.setItem("chat_with_name", name);
+
+    window.location.href = "user-chat.html";
+};
+</script>
+
+</body>
+</html>
