@@ -22,13 +22,13 @@
     }
     .btn {
         background:#007aff; color:white; border:none;
-        padding:10px 14px; border-radius:8px; cursor:pointer;
+        padding:10px; border-radius:8px; cursor:pointer;
         margin-top:10px; width:100%;
     }
     .btn:disabled {
         background:#ccc; cursor:not-allowed;
     }
-    .small { font-size:14px; color:#555; margin-top:6px; }
+    .small { font-size:14px; color:#555; }
     .online { color:green; font-weight:bold; }
 </style>
 </head>
@@ -41,39 +41,63 @@
 
 <div class="box">
     <h3>Budapesti szakik:</h3>
-
     <div id="szakiList"></div>
 </div>
 
-<script>
-// ➜ Megrendelő neve
-const userName = localStorage.getItem("user_name") || "Ismeretlen felhasználó";
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+    getFirestore, collection, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+    getAuth, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-// ➜ Kiírás
-document.getElementById("welcomeBox").innerHTML =
-    `<b>${userName}</b><br><br>
-     Válassz ki maximum <b>3 szakembert</b>, akikkel szeretnél beszélni.`;
+const firebaseConfig = {
+    apiKey: "AIzaSyAKhHvi3yObUurBKhT1r_feg4g0A5w766Q",
+    authDomain: "szaki-app.firebaseapp.com",
+    projectId: "szaki-app",
+    storageBucket: "szaki-app.firebasestorage.app",
+    messagingSenderId: "418149364598",
+    appId: "1:418149364598:web:2ae4450dc8fadfbac30057"
+};
 
-// ➜ DEMÓ szakik (később FIREBASE lesz)
-const szakik = [
-    { id: 1, name: "Kis Lajos", profession: "Festő", city: "Budapest", online: true },
-    { id: 2, name: "Nagy Zsolt", profession: "Festő", city: "Budapest", online: false },
-    { id: 3, name: "Mészáros Dani", profession: "Burkoló", city: "Budapest", online: true },
-    { id: 4, name: "Varga Jani", profession: "Festő", city: "Budapest", online: false }
-];
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-// ➜ Felhasználó által indított chatek száma
+// ➜ Megrendelő UID
+let customerUID = null;
+
+// ➜ Max 3 chat
 let activeChats = 0;
 
-// ➜ Lista megjelenítés
-function renderList() {
-    const box = document.getElementById("szakiList");
-    box.innerHTML = "";
+// ➜ Üdvözlő szöveg
+function renderWelcome() {
+    const userName = localStorage.getItem("user_name") || "Megrendelő";
+    document.getElementById("welcomeBox").innerHTML =
+        `<b>${userName}</b><br><br>
+         Válassz ki maximum <b>3 szakembert</b>, akikkel szeretnél beszélni.`;
+}
 
-    szakik.forEach(s => {
+// ➜ Szakik betöltése Firestore-ból
+async function loadSzakik() {
+    const szakiBox = document.getElementById("szakiList");
+    szakiBox.innerHTML = "Betöltés...";
+
+    const colRef = collection(db, "szakik");
+    const snapshot = await getDocs(colRef);
+
+    szakiBox.innerHTML = "";
+
+    snapshot.forEach(doc => {
+        const s = doc.data();
+        const szakiUID = doc.id;
+
         const isFull = activeChats >= 3;
 
-        box.innerHTML += `
+        szakiBox.innerHTML += `
             <div class="szaki">
                 <b>${s.name}</b> — ${s.profession}<br>
                 <span class="small">Város: ${s.city}</span><br>
@@ -81,9 +105,9 @@ function renderList() {
                     ${s.online ? "Online" : "Offline"}
                 </span><br><br>
 
-                <button class="btn"
-                        onclick="startChat(${s.id})"
-                        ${isFull ? "disabled" : ""}>
+                <button class="btn" 
+                    ${isFull ? "disabled" : ""}
+                    onclick="startChat('${szakiUID}')">
                     Chat indítása
                 </button>
             </div>
@@ -91,19 +115,36 @@ function renderList() {
     });
 }
 
-renderList();
-
 // ➜ Chat indítása
-function startChat(id) {
+window.startChat = function (szakiUID) {
+    if (!customerUID) {
+        alert("Hiba: nincs bejelentkezett felhasználó!");
+        return;
+    }
+
+    if (activeChats >= 3) return;
+
     activeChats++;
 
-    if (activeChats > 3) activeChats = 3;
+    // Valódi URL paraméterek:
+    const chatURL =
+        `user-chat.html?customer=${customerUID}&szaki=${szakiUID}`;
 
-    // Átirányítás majd a chat oldalra:
-    localStorage.setItem("chat_with", id);
+    window.location.href = chatURL;
+};
 
-    window.location.href = "user-chat.html"; // következő fájl
-}
+// ➜ Ellenőrizzük a bejelentkezést
+onAuthStateChanged(auth, user => {
+    if (!user) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    customerUID = user.uid;
+
+    renderWelcome();
+    loadSzakik();
+});
 </script>
 
 </body>
