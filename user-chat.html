@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8" />
+<title>Chat – SzakiChat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="style.css">
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+    padding: 0;
+}
+
+/* Fejléc */
+header {
+    background: #007aff;
+    color: white;
+    padding: 14px;
+    font-size: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Chat wrapper */
+.chat-container {
+    max-width: 480px;
+    margin: 15px auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+/* Fejléc blokkok */
+.info-box {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.info-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.status-online {
+    color: green;
+    font-weight: bold;
+}
+
+.status-offline {
+    color: red;
+    font-weight: bold;
+}
+
+/* Üzenet lista */
+.messages {
+    height: 60vh;
+    overflow-y: auto;
+    padding: 15px;
+    background: #fafafa;
+}
+
+/* Buborékok */
+.msg {
+    max-width: 75%;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 18px;
+    line-height: 1.4;
+    font-size: 15px;
+    display: inline-block;
+}
+
+.me {
+    background: #007aff;
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+    display: block;
+}
+
+.other {
+    background: #eaeaea;
+    color: black;
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
+    display: block;
+}
+
+/* Input sáv */
+.input-area {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    background: white;
+}
+
+.input-area input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.input-area button {
+    padding: 12px 18px;
+    margin-left: 10px;
+    background: #007aff;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Reklám */
+.ad-box {
+    margin: 15px auto;
+    max-width: 480px;
+    padding: 14px;
+    background: #fff3cd;
+    color: #8a6d3b;
+    border-radius: 8px;
+    border: 1px solid #ffeeba;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* Scroll fix mobilon */
+.messages::-webkit-scrollbar {
+    width: 6px;
+}
+</style>
+</head>
+<body>
+
+<header>SzakiChat – Chat</header>
+
+<div class="chat-container">
+
+    <div class="info-box">
+        <div id="chatTitle" class="info-title">Betöltés…</div>
+        <div id="chatStatus"></div>
+    </div>
+
+    <div id="messages" class="messages"></div>
+
+    <div class="input-area">
+        <input id="msgInput" type="text" placeholder="Írj üzenetet…" />
+        <button id="sendBtn">Küldés</button>
+    </div>
+</div>
+
+<div class="ad-box">
+    ⭐ Reklám hely – Google Ads vagy céges banner ide kerül ⭐
+</div>
+
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, serverTimestamp, query, orderBy } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAKhHvi3yObUurBKhT1r_feg4g0A5w766Q",
+    authDomain: "szaki-app.firebaseapp.com",
+    projectId: "szaki-app",
+    storageBucket: "szaki-app.appspot.com",
+    messagingSenderId: "418149364598",
+    appId: "1:418149364598:web:2ae4450dc8fadfbac30057"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+/* URL PARAMÉTEREK */
+const url = new URL(window.location.href);
+const workerId = url.searchParams.get("szaki");
+const userId   = url.searchParams.get("user");
+
+if (!workerId || !userId) {
+    alert("Hiányzó chat azonosító.");
+}
+
+/* CHAT SZOBA ID */
+const roomId = `chat_${userId}_${workerId}`;
+
+/* FEJLÉC ADATOK BETÖLTÉSE */
+async function loadWorkerInfo() {
+    const ref = doc(db, "users", workerId);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+        document.getElementById("chatTitle").innerText = "Ismeretlen szaki";
+        return;
+    }
+
+    const d = snap.data();
+
+    document.getElementById("chatTitle").innerText =
+        `${d.name} — ${d.profession || "Szakember"}`;
+
+    document.getElementById("chatStatus").innerHTML =
+        d.online
+        ? `<span class="status-online">Online</span>`
+        : `<span class="status-offline">Offline</span>`;
+}
+loadWorkerInfo();
+
+/* ÜZENET LISTA */
+const msgBox = document.getElementById("messages");
+
+function scrollBottom() {
+    setTimeout(() => {
+        msgBox.scrollTop = msgBox.scrollHeight;
+    }, 150);
+}
+
+/* TILTOTT ADAT MASZKOLÁSA */
+function maskSensitive(text) {
+    const patterns = [
+        /\+?\d{7,12}/g,      // telefonszám
+        /\S+@\S+\.\S+/g,     // email
+        /facebook\.com\/\S+/g,
+        /fb\.com\/\S+/g,
+        /instagram\.com\/\S+/g,
+        /\S+\.hu/g,
+        /\S+\.com/g
+    ];
+    let t = text;
+    patterns.forEach(p => {
+        t = t.replace(p, "***REJTETT***");
+    });
+    return t;
+}
+
+/* FIREBASE CHAT STREAM */
+const q = query(collection(db, "rooms", roomId, "messages"), orderBy("time"));
+onSnapshot(q, (snap) => {
+    msgBox.innerHTML = "";
+    snap.forEach(doc => {
+        const m = doc.data();
+        const div = document.createElement("div");
+        div.className = "msg " + (m.sender === auth.currentUser.uid ? "me" : "other");
+        div.innerText = m.text;
+        msgBox.appendChild(div);
+    });
+    scrollBottom();
+});
+
+/* ÜZENET KÜLDÉS */
+document.getElementById("sendBtn").onclick = sendMessage;
+document.getElementById("msgInput").addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
+});
+
+async function sendMessage() {
+    const text = document.getElementById("msgInput").value.trim();
+    if (!text) return;
+
+    const clean = maskSensitive(text);
+
+    await addDoc(collection(db, "rooms", roomId, "messages"), {
+        sender: auth.currentUser.uid,
+        text: clean,
+        time: serverTimestamp()
+    });
+
+    document.getElementById("msgInput").value = "";
+    scrollBottom();
+}
+
+/* LOGIN FIGYELÉSE */
+onAuthStateChanged(auth, user => {
+    if (!user) {
+        window.location.href = "login.html";
+    }
+});
+</script>
+
+</body>
+</html>
