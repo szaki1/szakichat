@@ -18,7 +18,7 @@
     }
     .szaki {
         padding:14px; border:1px solid #ddd; border-radius:10px;
-        margin:10px 0; background:#fafafa;
+        margin:10px 0; background:#fafafa; position:relative;
     }
     .btn {
         margin-top:10px; width:100%; background:#007aff; color:white;
@@ -27,6 +27,21 @@
     .btn:disabled { background:#ccc; cursor:not-allowed; }
     .online { color:green; font-weight:bold; }
     .small { font-size:14px; color:#666; margin-top:4px; }
+    
+    /* X gomb */
+    .removeBtn {
+        position:absolute;
+        right:10px;
+        top:10px;
+        background:#ff3b30;
+        color:white;
+        border:none;
+        border-radius:50%;
+        width:26px;
+        height:26px;
+        cursor:pointer;
+        font-weight:bold;
+    }
 </style>
 </head>
 
@@ -44,19 +59,25 @@
 <script type="module">
 import { db } from "./firebase.js";
 import {
-    collection, query, where, getDocs
+    collection, query, where, getDocs, doc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// --- A megrendelő neve a localStorage-ból ---
+// Megrendelő neve
 const userName = localStorage.getItem("user_name") || "Ismeretlen felhasználó";
+const userID = localStorage.getItem("user_id") || ""; // később az Auth adja
+
 document.getElementById("welcome").innerHTML = `
     <b>${userName}</b><br>
-    Válassz ki 1–3 szakembert, akikkel szeretnél beszélni.  
+    Jelenleg <b>maximum 3 szakival</b> beszélhetsz egyszerre.
 `;
 
+// Tárolt kiválasztott szakik
 let selected = JSON.parse(localStorage.getItem("selected_szakik") || "[]");
 
-// --- Betöltjük a szakikat FIRESTORE-ból ---
+// X-gombbal törölhető szakik
+let blocked = JSON.parse(localStorage.getItem("blocked_szakik") || "[]");
+
+// --- SZAKIK BETÖLTÉSE FIRESTORE-BÓL ---
 async function loadSzakik() {
     const listBox = document.getElementById("szakiList");
     listBox.innerHTML = "Betöltés…";
@@ -68,24 +89,36 @@ async function loadSzakik() {
     );
 
     const snap = await getDocs(q);
-
     listBox.innerHTML = "";
+
     snap.forEach(docu => {
         const s = docu.data();
         const id = docu.id;
-
         const online = s.online ? "🟢 Online" : "⚪ Offline";
 
-        const disabled = selected.length >= 3 && !selected.includes(id)
+        const alreadySelected = selected.includes(id);
+        const alreadyBlocked = blocked.includes(id);
+
+        const disabled =
+            (selected.length >= 3 && !alreadySelected)
+            || alreadyBlocked
             ? "disabled"
             : "";
 
         listBox.innerHTML += `
             <div class="szaki">
+                
+                ${alreadySelected
+                    ? `<button class="removeBtn" onclick="removeSzaki('${id}')">X</button>`
+                    : ""
+                }
+
                 <b>${s.name}</b> — ${s.profession}<br>
-                <span class="small">${online}</span><br>
-                <button class="btn" ${disabled} onclick="selectSzaki('${id}', '${s.name}')">
-                    Chat indítása
+                <span class="small">${online}</span><br><br>
+
+                <button class="btn" ${disabled}
+                    onclick="selectSzaki('${id}', '${s.name}')">
+                    ${alreadySelected ? "Már kiválasztottad" : "Chat indítása"}
                 </button>
             </div>
         `;
@@ -94,18 +127,50 @@ async function loadSzakik() {
 
 loadSzakik();
 
-// --- Szakember kiválasztása ---
+// --- SZAKI KIVÁLASZTÁSA ---
 window.selectSzaki = function(id, name) {
-    if (!selected.includes(id)) selected.push(id);
+    if (!selected.includes(id)) {
+        selected.push(id);
 
-    if (selected.length > 3) selected.length = 3;
+        // 3-nál több ne lehessen
+        if (selected.length > 3) selected.length = 3;
 
-    localStorage.setItem("selected_szakik", JSON.stringify(selected));
+        localStorage.setItem("selected_szakik", JSON.stringify(selected));
+    }
 
+    // belép chatbe
     localStorage.setItem("chat_with", id);
     localStorage.setItem("chat_with_name", name);
 
     window.location.href = "user-chat.html";
+};
+
+// --- SZAKI X-ELÉSE ---
+window.removeSzaki = async function(id) {
+    // 1. Kiveszi a listából
+    selected = selected.filter(x => x !== id);
+    localStorage.setItem("selected_szakik", JSON.stringify(selected));
+
+    // 2. Hozzáadjuk tiltott listához
+    if (!blocked.includes(id)) {
+        blocked.push(id);
+        localStorage.setItem("blocked_szakik", JSON.stringify(blocked));
+    }
+
+    // 3. FIRESTORE: a szakival nem beszélhet tovább, automatikus üzenet
+    const chatID = userID + "_" + id;
+
+    try {
+        await updateDoc(doc(db, "chats", chatID), {
+            blocked: true,
+            systemMessage:
+                "A megrendelő lezárta a beszélgetést. Más szakikat is meghallgat, 24 órán belül dönt."
+        });
+    } catch (e) {
+        console.log("Chat még nem létezett, nem gond.");
+    }
+
+    loadSzakik();
 };
 </script>
 
