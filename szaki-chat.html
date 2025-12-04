@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SzakiChat – Szaki üzenetek</title>
+
+<style>
+    body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; }
+    header {
+        background:#ff8c00; color:white; text-align:center;
+        padding:16px; font-size:22px; font-weight:bold;
+    }
+
+    .chat-box {
+        max-width:480px; height:70vh;
+        overflow-y:auto; background:white;
+        margin:15px auto; padding:15px;
+        border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .msg {
+        padding:10px 14px; margin:8px 0;
+        border-radius:10px; max-width:70%;
+        line-height:1.4;
+        word-wrap:break-word;
+    }
+
+    .me { background:#d1ffd1; margin-left:auto; }
+    .other { background:#eaeaea; margin-right:auto; }
+
+    .input-area {
+        max-width:480px; margin:10px auto;
+        display:flex; gap:8px;
+    }
+
+    input {
+        flex:1; padding:10px;
+        border-radius:8px; border:1px solid #ccc;
+    }
+
+    button {
+        padding:10px 12px; border:none;
+        background:#ff8c00; color:white;
+        border-radius:8px; cursor:pointer;
+    }
+
+    .mic-btn { background:#007aff; }
+
+    .img-thumb {
+        max-width:160px;
+        border-radius:8px;
+        margin-top:6px;
+    }
+</style>
+</head>
+
+<body>
+
+<header>SzakiChat – Szakember</header>
+
+<div class="chat-box" id="chatBox">
+    Betöltés…
+</div>
+
+<div class="input-area">
+    <input id="msgInput" placeholder="Írj üzenetet…">
+    <button onclick="sendMessage()">Küldés</button>
+    <button class="mic-btn" onclick="startDictation()">🎤</button>
+</div>
+
+<div class="input-area">
+    <input type="file" id="imgUpload">
+    <button onclick="sendImage()">📸</button>
+</div>
+
+
+<script type="module">
+
+/* ================================
+   FIREBASE IMPORT
+================================ */
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import {
+    getFirestore, doc, setDoc, updateDoc,
+    getDoc, onSnapshot, arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+
+/* ================================
+   FIREBASE KONFIG
+================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAKhHvi3yObUurBKhT1r_feg4g0A5w766Q",
+  authDomain: "szaki-app.firebaseapp.com",
+  projectId: "szaki-app",
+  storageBucket: "szaki-app.firebasestorage.app",
+  messagingSenderId: "418149364598",
+  appId: "1:418149364598:web:2ae4450dc8fadfbac30057"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+
+/* ================================
+   CHAT AZONOSÍTÓ
+================================ */
+const chatID = localStorage.getItem("chat_with");
+const chatRef = doc(db, "chats", chatID);
+
+if (!chatID) {
+    alert("Hiányzó chat azonosító.");
+}
+
+
+/* ================================
+   FELHASZNÁLÓ (SZAKI)
+================================ */
+const szakiName = localStorage.getItem("szaki_name") || "Szaki";
+
+
+/* ================================
+   CHAT BETÖLTÉSE ÉLŐBEN
+================================ */
+const chatBox = document.getElementById("chatBox");
+
+onSnapshot(chatRef, (snap) => {
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const msgs = data.messages || [];
+
+    chatBox.innerHTML = "";
+
+    msgs.forEach(m => {
+        if (m.type === "img") {
+            chatBox.innerHTML += `
+                <div class="msg ${m.from === szakiName ? 'me' : 'other'}">
+                    <img src="${m.url}" class="img-thumb">
+                </div>
+            `;
+        } else {
+            chatBox.innerHTML += `
+                <div class="msg ${m.from === szakiName ? 'me' : 'other'}">
+                    ${m.text}
+                </div>
+            `;
+        }
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+
+/* ================================
+   ÜZENET KÜLDÉSE
+================================ */
+window.sendMessage = async function() {
+    const msg = document.getElementById("msgInput").value.trim();
+    if (!msg) return;
+
+    await updateDoc(chatRef, {
+        messages: arrayUnion({
+            from: szakiName,
+            text: msg,
+            time: Date.now(),
+            type: "text"
+        }),
+        lastMessage: msg
+    });
+
+    document.getElementById("msgInput").value = "";
+};
+
+
+/* ================================
+   KÉPKÜLDÉS (elő van készítve)
+================================ */
+window.sendImage = async function() {
+    const file = document.getElementById("imgUpload").files[0];
+    if (!file) return alert("Nincs kiválasztva kép!");
+
+    // Tárolás később → Storage integrációval
+    const fakeUrl = URL.createObjectURL(file);
+
+    await updateDoc(chatRef, {
+        messages: arrayUnion({
+            from: szakiName,
+            url: fakeUrl,
+            time: Date.now(),
+            type: "img"
+        }),
+        lastMessage: "📸 Kép csatolva"
+    });
+};
+
+
+/* ================================
+   DIKTÁLÁS – Hang → Szöveg
+================================ */
+window.startDictation = function() {
+    if (!("webkitSpeechRecognition" in window)) {
+        alert("A böngésződ nem támogatja a diktálást.");
+        return;
+    }
+
+    const rec = new webkitSpeechRecognition();
+    rec.lang = "hu-HU";
+    rec.continuous = false;
+    rec.interimResults = false;
+
+    rec.start();
+
+    rec.onresult = function(e) {
+        let text = e.results[0][0].transcript;
+        document.getElementById("msgInput").value = text;
+    };
+};
+
+</script>
+
+</body>
+</html>
