@@ -6,60 +6,65 @@
 <title>SzakiChat – Chat</title>
 
 <style>
-    body { margin:0; background:#f2f2f2; font-family:Arial; }
-
+    body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; }
     header {
         background:#007aff; color:white; text-align:center;
         padding:16px; font-size:22px; font-weight:bold;
     }
 
     #chatBox {
-        max-width:480px; margin:20px auto;
-        background:white; border-radius:12px;
-        padding:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1);
-        height:70vh; display:flex; flex-direction:column;
-    }
-
-    #chatMessages {
-        flex:1; overflow-y:auto; padding:10px;
-        border-bottom:1px solid #ddd;
-    }
-
-    .bubble {
-        padding:10px 14px;
-        margin:6px 0;
-        background:#e9e9e9;
+        max-width: 480px;
+        margin: 20px auto;
+        background:white;
         border-radius:12px;
-        max-width:80%;
-        font-size:15px;
+        padding: 15px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.1);
+        height: 70vh;
+        overflow-y: auto;
     }
 
-    .user { background:#007aff; color:white; margin-left:auto; }
+    .msg {
+        padding:10px 14px;
+        border-radius:10px;
+        margin:6px 0;
+        max-width: 80%;
+        word-break: break-word;
+    }
+
+    .me { background:#007aff; color:white; margin-left:auto; }
+    .them { background:#e5e5ea; color:black; margin-right:auto; }
 
     #inputArea {
-        display:flex; gap:6px; margin-top:10px;
+        display:flex;
+        gap:6px;
+        max-width:480px;
+        margin: 12px auto;
     }
 
-    #msgInput {
-        flex:1; padding:10px; border-radius:8px;
-        border:1px solid #ccc; font-size:15px;
+    input {
+        flex:1;
+        padding:12px;
+        border-radius:8px;
+        border:1px solid #ccc;
     }
 
-    #sendBtn, #micBtn {
-        padding:10px 16px; background:#007aff; color:white;
-        border:none; border-radius:8px; cursor:pointer;
+    button {
+        background:#007aff;
+        color:white;
+        border:none;
+        padding:12px;
+        border-radius:8px;
+        cursor:pointer;
     }
 
-    #imageBtn {
-        display:none;
+    #adSpace {
+        max-width:480px; margin:10px auto;
+        padding:12px; background:#fff3cd; text-align:center;
+        border:1px solid #ffeeba; border-radius:8px;
+        font-size:14px;
     }
 
-    .adbox {
-        margin:20px auto; max-width:480px;
-        padding:10px; text-align:center;
-        background:#ffe8b3; border-radius:10px;
-        color:#5a4300; font-size:14px;
-    }
+    #photoInput { display:none; }
 </style>
 </head>
 
@@ -67,132 +72,164 @@
 
 <header>SzakiChat – Chat</header>
 
-<div id="chatBox">
-    <div id="chatMessages">Betöltés…</div>
+<div id="chatBox">Betöltés…</div>
 
-    <div id="inputArea">
-
-        <input id="msgInput" placeholder="Írj üzenetet...">
-
-        <button id="micBtn">🎤</button>
-
-        <button id="sendBtn">Küldés</button>
-
-        <input type="file" id="imageBtn" accept="image/*">
-    </div>
-
-    <button onclick="document.getElementById('imageBtn').click()" 
-            style="margin-top:10px; width:100%; padding:10px; border-radius:8px; border:none; background:#555; color:white;">
-        📷 Kép küldése
-    </button>
+<div id="inputArea">
+    <input id="msgInput" placeholder="Írj üzenetet…">
+    <button onclick="sendMsg()">Küldés</button>
+    <button onclick="document.getElementById('photoInput').click()">📷</button>
+    <button onclick="startVoice()">🎤</button>
 </div>
 
-<div class="adbox">⭐ Reklám hely – Google Ads vagy céges banner ide kerül ⭐</div>
+<input type="file" id="photoInput" accept="image/*">
 
-<!-- FIREBASE CHAT SCRIPT -->
+<div id="adSpace">⭐ Reklám hely – Google Ads vagy céges banner ide kerül ⭐</div>
+
 <script type="module">
-import { db, storage } from "./firebase.js";
+
+/* ================================
+   FIREBASE IMPORT
+================================ */
 import {
-  collection, addDoc, serverTimestamp,
-  query, orderBy, onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
 import {
-  ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+    getFirestore, collection, addDoc, query, orderBy, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// --- Chat ID ellenőrzése ---
-const chatId = localStorage.getItem("chat_with");
-if (!chatId) {
-    alert("Hiányzó chat azonosító.");
-    window.location.href = "user-chat-list.html";
-}
+import {
+    getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-// --- DOM elemek ---
-const messagesBox = document.getElementById("chatMessages");
-const input = document.getElementById("msgInput");
-const sendBtn = document.getElementById("sendBtn");
-const imgBtn = document.getElementById("imageBtn");
-const micBtn = document.getElementById("micBtn");
 
-// --- Üzenet küldés ---
-async function sendMessage(text) {
-    if (!text.trim()) return;
-
-    await addDoc(collection(db, "chats", chatId, "messages"), {
-        sender: "user",
-        type: "text",
-        text: text,
-        createdAt: serverTimestamp()
-    });
-
-    input.value = "";
-}
-
-sendBtn.onclick = () => sendMessage(input.value);
-
-// --- KÉPKÜLDÉS ---
-imgBtn.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const storageRef = ref(storage, `chatImages/${chatId}/${Date.now()}.jpg`);
-    await uploadBytes(storageRef, file);
-
-    const url = await getDownloadURL(storageRef);
-
-    await addDoc(collection(db, "chats", chatId, "messages"), {
-        sender: "user",
-        type: "image",
-        url: url,
-        createdAt: serverTimestamp()
-    });
+/* ================================
+   FIREBASE KONFIG
+================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAKhHvi3yObUurBKhT1r_feg4g0A5w766Q",
+  authDomain: "szaki-app.firebaseapp.com",
+  projectId: "szaki-app",
+  storageBucket: "szaki-app.firebasestorage.app",
+  messagingSenderId: "418149364598",
+  appId: "1:418149364598:web:2ae4450dc8fadfbac30057"
 };
 
-// --- DIKTÁLÁS ---
-micBtn.onclick = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert("A böngésződ nem támogatja a hangfelismerést.");
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+
+/* ================================
+   CHAT AZONOSÍTÓ BETÖLTÉSE
+================================ */
+const chatWith = localStorage.getItem("chat_with");
+const userName = localStorage.getItem("user_name") || "Megrendelő";
+
+if (!chatWith) {
+    alert("Hiányzó chat azonosító.");
+}
+
+
+/* ================================
+   FIRESTORE CSATORNA
+================================ */
+const chatRef = collection(db, "chats", chatWith, "messages");
+
+const q = query(chatRef, orderBy("time", "asc"));
+
+onSnapshot(q, (snapshot) => {
+    const box = document.getElementById("chatBox");
+    box.innerHTML = "";
+
+    snapshot.forEach(doc => {
+        const d = doc.data();
+
+        let type = d.sender === userName ? "me" : "them";
+
+        if (d.photoUrl) {
+            box.innerHTML += `
+                <div class="msg ${type}">
+                    <img src="${d.photoUrl}" style="max-width:180px; border-radius:8px;">
+                </div>
+            `;
+        } else {
+            box.innerHTML += `
+                <div class="msg ${type}">
+                    ${d.text}
+                </div>
+            `;
+        }
+    });
+
+    box.scrollTop = box.scrollHeight;
+});
+
+
+/* ================================
+   ÜZENET KÜLDÉS
+================================ */
+async function sendMsg() {
+    const text = document.getElementById("msgInput").value.trim();
+
+    if (!text) return;
+
+    // TILTÁS: telefonszám, email, FB név stb.
+    if (/(06|07|\+36|\@|facebook|messenger|gmail|viber|whatsapp)/i.test(text)) {
+        alert("Elérhetőség küldése zárolva! Minimum 5 megosztás után engedélyezett.");
         return;
     }
 
-    const rec = new SpeechRecognition();
-    rec.lang = "hu-HU";
-
-    rec.onresult = (e) => {
-        input.value = e.results[0][0].transcript;
-    };
-
-    rec.start();
-};
-
-// --- VALÓS IDEJŰ CHAT FIRESTORE-BÓL ---
-const q = query(
-    collection(db, "chats", chatId, "messages"),
-    orderBy("createdAt", "asc")
-);
-
-onSnapshot(q, (snapshot) => {
-    messagesBox.innerHTML = "";
-
-    snapshot.forEach(doc => {
-        const msg = doc.data();
-
-        if (msg.type === "text") {
-            messagesBox.innerHTML += `<div class="bubble user">${msg.text}</div>`;
-        }
-
-        if (msg.type === "image") {
-            messagesBox.innerHTML += `
-                <div class="bubble user">
-                    <img src="${msg.url}" style="max-width:100%; border-radius:10px;">
-                </div>`;
-        }
+    await addDoc(chatRef, {
+        sender: userName,
+        text,
+        time: Date.now()
     });
 
-    messagesBox.scrollTop = messagesBox.scrollHeight;
+    document.getElementById("msgInput").value = "";
+}
+
+
+/* ================================
+   FOTÓKÜLDÉS
+================================ */
+document.getElementById("photoInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileRef = ref(storage, `chat_photos/${chatWith}/${Date.now()}.jpg`);
+
+    await uploadBytes(fileRef, file);
+    const url = await getDownloadURL(fileRef);
+
+    await addDoc(chatRef, {
+        sender: userName,
+        photoUrl: url,
+        time: Date.now()
+    });
 });
+
+
+/* ================================
+   DIKTÁLÁS GOMB
+================================ */
+function startVoice() {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+        alert("A böngésző nem támogatja a beszédfelismerést.");
+        return;
+    }
+
+    const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    rec.lang = "hu-HU";
+
+    rec.start();
+
+    rec.onresult = (e) => {
+        let text = e.results[0][0].transcript;
+        document.getElementById("msgInput").value = text;
+    };
+}
+
 </script>
 
 </body>
