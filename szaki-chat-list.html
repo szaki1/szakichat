@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bejövő beszélgetések – SzakiChat</title>
+
+<style>
+    body { font-family: Arial, sans-serif; background:#f2f2f2; margin:0; }
+    header {
+        background:#ff8c00; color:white; padding:16px;
+        text-align:center; font-size:22px; font-weight:bold;
+    }
+
+    .box {
+        max-width:480px; margin:20px auto; background:white;
+        padding:18px; border-radius:12px;
+        box-shadow:0 4px 14px rgba(0,0,0,0.1);
+    }
+
+    .chat-item {
+        padding:12px; margin:10px 0;
+        background:#fafafa; border:1px solid #ddd;
+        border-radius:10px; cursor:pointer;
+    }
+
+    .chat-item:hover {
+        background:#eee;
+    }
+
+    .online { color:green; font-weight:bold; }
+</style>
+</head>
+
+<body>
+
+<header>Bejövő beszélgetések</header>
+
+<div class="box">
+    <h3>Aktív megrendelők:</h3>
+    <div id="chatList">Betöltés...</div>
+</div>
+
+<script type="module">
+
+/* ================================
+   FIREBASE IMPORT
+================================ */
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import {
+    getFirestore, collection, query, where,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+
+/* ================================
+   FIREBASE KONFIG
+================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAKhHvi3yObUurBKhT1r_feg4g0A5w766Q",
+  authDomain: "szaki-app.firebaseapp.com",
+  projectId: "szaki-app",
+  storageBucket: "szaki-app.firebasestorage.app",
+  messagingSenderId: "418149364598",
+  appId: "1:418149364598:web:2ae4450dc8fadfbac30057"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+
+/* ================================
+   SZAKI ADATAI
+================================ */
+const szakiName = localStorage.getItem("szaki_name") || "Ismeretlen szaki";
+
+/* ================================
+   CHAT LISTA BETÖLTÉSE
+================================ */
+const chatListDiv = document.getElementById("chatList");
+
+// Minden chat, ahol az adott szaki szerepel
+const q = query(
+    collection(db, "chats"),
+    where("szaki", "==", szakiName)
+);
+
+onSnapshot(q, (snapshot) => {
+    chatListDiv.innerHTML = "";
+
+    if (snapshot.empty) {
+        chatListDiv.innerHTML = "<p>Nincs aktív beszélgetés.</p>";
+        return;
+    }
+
+    snapshot.forEach(doc => {
+        const d = doc.data();
+
+        chatListDiv.innerHTML += `
+            <div class="chat-item" onclick="openChat('${doc.id}')">
+                <b>${d.user}</b><br>
+                <span>${d.lastMessage || "Új beszélgetés"}</span><br>
+                <span class="online">${d.online ? "Online" : "Offline"}</span>
+            </div>
+        `;
+    });
+});
+
+
+/* ================================
+   CHAT MEGNYITÁSA
+================================ */
+window.openChat = function(id) {
+    localStorage.setItem("chat_with", id);
+    window.location.href = "szaki-chat.html";
+}
+
+</script>
+
+</body>
+</html>
