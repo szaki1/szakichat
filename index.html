@@ -2,79 +2,142 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
+    <title>SzakiChat – Üdvözlünk!</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SzakiChat – Kezdőlap</title>
+    <link rel="stylesheet" href="style.css">
 
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            background: #f2f2f2;
-            text-align: center;
+            margin:0;
+            font-family:Arial, sans-serif;
+            background:#f2f2f2;
         }
 
         header {
-            background: #007aff;
-            padding: 18px;
-            color: white;
-            font-size: 26px;
-            font-weight: bold;
+            background:#007aff;
+            color:white;
+            padding:22px;
+            text-align:center;
+            font-size:26px;
+            font-weight:bold;
         }
 
-        .box {
-            margin-top: 50px;
+        .container {
+            max-width:480px;
+            margin:40px auto;
+            background:white;
+            padding:28px;
+            border-radius:14px;
+            text-align:center;
+            box-shadow:0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        h1 {
+            color:#007aff;
+            font-size:28px;
+            margin-bottom:16px;
+        }
+
+        p {
+            font-size:17px;
+            color:#444;
+            line-height:1.5;
         }
 
         .btn {
-            display: block;
-            width: 80%;
-            max-width: 350px;
-            margin: 25px auto;
-            padding: 18px;
-            background: #007aff;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
+            width:100%;
+            padding:16px;
+            margin-top:18px;
+            font-size:19px;
+            border:none;
+            border-radius:10px;
+            cursor:pointer;
+            font-weight:bold;
+        }
+
+        .btn-szaki {
+            background:#007aff;
+            color:white;
+        }
+
+        .btn-user {
+            background:#ff9500;
+            color:white;
         }
 
         .btn:hover {
-            background: #005fcc;
+            transform:scale(1.03);
         }
 
-        /* Reklám hely */
-        .ad {
-            margin-top: 40px;
-            padding: 20px;
-            background: #fff3cd;
-            border-radius: 10px;
-            width: 80%;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-            font-size: 15px;
+        footer {
+            margin-top:40px;
+            text-align:center;
+            color:#666;
+            font-size:14px;
+        }
+
+        /* ❤️ Támogatás gomb */
+        #supportFloatingBtn {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            background: #ff2d55;
+            padding: 14px 22px;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+
+        #supportFloatingBtn .heart {
+            animation: heartbeat 1.4s infinite;
+        }
+
+        @keyframes heartbeat {
+            0%{transform:scale(1);}
+            25%{transform:scale(1.25);}
+            40%{transform:scale(1);}
+            60%{transform:scale(1.25);}
+            100%{transform:scale(1);}
         }
     </style>
 </head>
 
 <body>
 
-<header>SzakiChat</header>
+<header>SzakiChat.hu</header>
 
-<div class="box">
-    <button class="btn" onclick="window.location.href='szaki-login.html'">
-        Szaki vagyok – belépés
+<div class="container">
+
+    <h1>Üdvözlünk a SzakiChat-en!</h1>
+
+    <p>
+        A legegyszerűbb módja, hogy szakemberrel vagy megrendelővel  
+        <b>azonnal kapcsolatba lépj</b>.
+    </p>
+
+    <button class="btn btn-szaki" onclick="window.location.href='szaki-login.html'">
+        👷‍♂️ Szakember vagyok – Belépek
     </button>
 
-    <button class="btn" onclick="window.location.href='user-start.html'">
-        Megrendelő vagyok – szakembert keresek
+    <button class="btn btn-user" onclick="window.location.href='user-register.html'">
+        🧑‍💼 Megrendelő vagyok – szakembert keresek
     </button>
+
 </div>
 
-<div class="ad">
-    🔸 **Reklám hely** – ide jön majd Google Ads vagy céges banner
+<footer>
+    SzakiChat.hu – 2025 • Magyar fejlesztés
+</footer>
+
+<!-- ❤️ Lebegő támogatás -->
+<div id="supportFloatingBtn"
+     onclick="window.open('https://www.paypal.com/donate/?hosted_button_id=QGU3WXVSCH22A','_blank')">
+    <span class="heart">❤️</span> Támogasd a SzakiChat-et
 </div>
 
 </body>
